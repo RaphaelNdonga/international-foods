@@ -1,3 +1,6 @@
+# Description
+street-kigali is a simple decentralized application. It allows users to purchase food on the blockchain, and also to add new products to the blockchain. The blockchain network is Celo.
+
 # Install
 
 ```
