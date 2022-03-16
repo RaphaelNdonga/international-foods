@@ -3,7 +3,6 @@ import BigNumber from 'bignumber.js'
 import Web3 from 'web3'
 import MarketPlaceAbi from '../contract/marketplace.abi.json'
 import ERC20Abi from '../contract/erc20.abi.json'
-import '@openzeppelin/contracts/token/ERC721/ERC721.sol'
 
 const ERC20_decimals = 18
 
@@ -55,6 +54,7 @@ const getBalance = async function () {
 
 const MPContractAdress = "0x7a6eC3b07576000C740851aA71b3a5AfF82c67A4"
 const cUSDAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1"
+const NFFTAddress = "0x6a61e93437ed35a8f41f5eF0501839D46C55B1A9"
 
 const getProducts = async function () {
     const productsLength = await contract.methods.getProductsLength().call()

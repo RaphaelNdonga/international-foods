@@ -13,8 +13,8 @@ function createJSONFile(name, imageURL, description, location, price) {
     //Generating the JSON for the food NFT
     const body = {
         name: name,
-        imageURL: imageURL,
         description: description,
+        image: imageURL,
         location: location,
         price: price
     }
