@@ -3,6 +3,7 @@ import BigNumber from 'bignumber.js'
 import Web3 from 'web3'
 import MarketPlaceAbi from '../contract/marketplace.abi.json'
 import ERC20Abi from '../contract/erc20.abi.json'
+import '@openzeppelin/contracts/token/ERC721/ERC721.sol'
 
 const ERC20_decimals = 18
 
