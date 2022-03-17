@@ -99,7 +99,9 @@ const getProducts = async function () {
     resultUris.forEach((item) => {
         console.log("tokenURI is ", item)
         const request = new Request(item)
-        fetch(request).then(response => response.json()).then(data => {
+        fetch(request).then(response => response.json()).catch((error) => {
+            console.log("There was an error parsing the json: ", error)
+        }).then(data => {
             console.log(data)
         })
     })
