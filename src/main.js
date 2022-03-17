@@ -61,28 +61,44 @@ const getBalance = async function () {
 
 }
 
-const getProducts = async function () {
-    const productsLength = await contract.methods.getProductsLength().call()
-    const _products = []
+// const getProducts = async function () {
+//     const productsLength = await contract.methods.getProductsLength().call()
+//     const _products = []
 
+//     for (let i = 0; i < productsLength; i++) {
+//         let _product = new Promise(async (resolve, reject) => {
+//             let p = await contract.methods.readProduct(i).call()
+//             resolve({
+//                 index: i,
+//                 owner: p[0],
+//                 name: p[1],
+//                 image: p[2],
+//                 description: p[3],
+//                 location: p[4],
+//                 price: new BigNumber(p[5]),
+//                 sold: p[6],
+//             })
+//         })
+//         _products.push(_product)
+//     }
+//     products = await Promise.all(_products)
+//     renderProducts()
+// }
+
+const getProducts = async function () {
+    const productsLength = await nfftContract.methods.tokenId().call()
+    const uris = []
     for (let i = 0; i < productsLength; i++) {
-        let _product = new Promise(async (resolve, reject) => {
-            let p = await contract.methods.readProduct(i).call()
-            resolve({
-                index: i,
-                owner: p[0],
-                name: p[1],
-                image: p[2],
-                description: p[3],
-                location: p[4],
-                price: new BigNumber(p[5]),
-                sold: p[6],
-            })
+        let uri = new Promise(async (resolve, reject) => {
+            let stringUri = await nfftContract.methods.tokenURI(i).call()
+            resolve(stringUri)
         })
-        _products.push(_product)
+        uris.push(uri)
     }
-    products = await Promise.all(_products)
-    renderProducts()
+    let resultUris = await Promise.all(uris)
+    resultUris.forEach((item) => {
+        console.log("tokenURI is ", item)
+    })
 }
 
 function renderProducts() {
@@ -219,10 +235,10 @@ async function getJSONURI(name, imageURL, description, location, price) {
         return uri
     }).catch((error) => {
         console.log(error)
-    }).then(async (result) => {
+    }).then(async (uri) => {
         try {
             // uri = getJSONURI(...params)
-            const result = await nfftContract.methods.createNFT("uri").send({ from: kit.defaultAccount })
+            const result = await nfftContract.methods.createNFT(uri).send({ from: kit.defaultAccount })
             notification(`🎉 You successfully added ${name}.`)
             getProducts()
         } catch (error) {
