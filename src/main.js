@@ -88,14 +88,21 @@ const getBalance = async function () {
 const getProducts = async function () {
     const productsLength = await nfftContract.methods.tokenId().call()
     const uris = []
+    const owners = []
     for (let i = 0; i < productsLength; i++) {
         let uri = new Promise(async (resolve, reject) => {
             let stringUri = await nfftContract.methods.tokenURI(i).call()
             resolve(stringUri)
         })
+        let owner = new Promise(async (resolve, reject) => {
+            let _owner = await nfftContract.methods.ownerOf(i).call()
+            resolve(_owner)
+        })
         uris.push(uri)
+        owners.push(owner)
     }
     let resultUris = await Promise.all(uris)
+    let resultOwners = await Promise.all(owners)
     console.log(uris)
     let _products = []
     for (let j = 0; j < productsLength; j++) {
@@ -108,7 +115,7 @@ const getProducts = async function () {
             console.log(data.name)
             let _product = {
                 index: j,
-                owner: "x",
+                owner: resultOwners[j],
                 name: data.name,
                 image: data.image,
                 description: data.description,
