@@ -96,15 +96,36 @@ const getProducts = async function () {
         uris.push(uri)
     }
     let resultUris = await Promise.all(uris)
-    resultUris.forEach((item) => {
+    console.log(uris)
+    let _products = []
+    for (let j = 0; j < productsLength; j++) {
+        let item = resultUris[j]
         console.log("tokenURI is ", item)
         const request = new Request(item)
         fetch(request).then(response => response.json()).catch((error) => {
             console.log("There was an error parsing the json: ", error)
         }).then(data => {
-            console.log(data)
+            console.log(data.name)
+            let _product = {
+                index: j,
+                owner: "x",
+                name: data.name,
+                image: data.image,
+                description: data.description,
+                location: data.location,
+                price: new BigNumber(data.price),
+                sold: 0,
+            }
+
+            _products.push(_product)
+        }).catch((error) => {
+            console.log("There was an error with the json file: ", error)
+        }).finally(() => {
+            products = _products
+            console.log(products)
+            renderProducts()
         })
-    })
+    }
 }
 
 function renderProducts() {
@@ -221,11 +242,11 @@ async function getJSONURI(name, imageURL, description, location, price) {
     })
     //Generating the JSON for the food NFT
     const body = {
-        name: name,
-        description: description,
-        image: imageURL,
-        location: location,
-        price: price
+        "name": name,
+        "description": description,
+        "image": imageURL,
+        "location": location,
+        "price": price
     }
     const options = {
         pinataMetadata: {
