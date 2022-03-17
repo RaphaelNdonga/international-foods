@@ -3,11 +3,15 @@ import BigNumber from 'bignumber.js'
 import Web3 from 'web3'
 import MarketPlaceAbi from '../contract/marketplace.abi.json'
 import ERC20Abi from '../contract/erc20.abi.json'
+import NFFTAbi from '../contract/nfft.abi.json'
+// import { getJSONURI } from './pinata'
+import pinataSdk from '@pinata/sdk'
 
 const ERC20_decimals = 18
 
 let kit
 let contract
+let nfftContract
 let products = []
 
 window.addEventListener('load', async () => {
@@ -17,6 +21,10 @@ window.addEventListener('load', async () => {
     await getProducts()
     notificationOff()
 });
+
+const MPContractAdress = "0x7a6eC3b07576000C740851aA71b3a5AfF82c67A4"
+const cUSDAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1"
+const NFFTAddress = "0xF23085ea26d8F1d154cd81670CC7699331C9b49C"
 
 const connectCeloWallet = async function () {
     if (window.celo) {
@@ -30,6 +38,7 @@ const connectCeloWallet = async function () {
             const accounts = await kit.web3.eth.getAccounts()
             kit.defaultAccount = accounts[0]
             contract = new kit.web3.eth.Contract(MarketPlaceAbi, MPContractAdress)
+            nfftContract = new kit.web3.eth.Contract(NFFTAbi, NFFTAddress)
         } catch (error) {
             notification(`Error: ${error}`)
         }
@@ -51,10 +60,6 @@ const getBalance = async function () {
     document.querySelector("#balance").textContent = cUSDBalance
 
 }
-
-const MPContractAdress = "0x7a6eC3b07576000C740851aA71b3a5AfF82c67A4"
-const cUSDAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1"
-const NFFTAddress = "0x6a61e93437ed35a8f41f5eF0501839D46C55B1A9"
 
 const getProducts = async function () {
     const productsLength = await contract.methods.getProductsLength().call()
@@ -161,7 +166,8 @@ document.querySelector("#newProductBtn")
         notification(`⌛ Adding "${params[0]}"...`)
 
         try {
-            const result = await contract.methods.writeProduct(...params).send({ from: kit.defaultAccount })
+            // uri = getJSONURI(...params)
+            const result = await nfftContract.methods.createNFT("uri").send({ from: kit.defaultAccount })
         } catch (error) {
             notification(`⚠️ ${error}.`)
         }
@@ -189,3 +195,37 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
         }
     }
 })
+
+function getJSONURI(name, imageURL, description, location, price) {
+    //These are the api keys for using the Pinata API
+    const pinata = pinataSdk('f2e0188887f4b5ae161f', '92ae688fbe61ce9abcf496ffee7efd82b56eeaf9838293b49e25134280f6cc53')
+
+    pinata.testAuthentication().then((result) => {
+        console.log(result)
+    }).catch((error) => {
+        console.log(error)
+    })
+    //Generating the JSON for the food NFT
+    const body = {
+        name: name,
+        description: description,
+        image: imageURL,
+        location: location,
+        price: price
+    }
+    const options = {
+        pinataMetadata: {
+            name: `${name}.json`
+        }
+    }
+    let uri
+    pinata.pinJSONToIPFS(body, options).then((result) => {
+        console.log(result)
+        console.log("And the link can be found at: ")
+        uri = `https://ipfs.io/ipfs/${result.IpfsHash}?filename=${name}.json`
+        console.log(uri)
+    }).catch((error) => {
+        console.log(error)
+    })
+    return uri
+}
