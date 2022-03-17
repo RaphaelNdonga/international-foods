@@ -98,6 +98,10 @@ const getProducts = async function () {
     let resultUris = await Promise.all(uris)
     resultUris.forEach((item) => {
         console.log("tokenURI is ", item)
+        const request = new Request(item)
+        fetch(request).then(response => response.json()).then(data => {
+            console.log(data)
+        })
     })
 }
 
