@@ -164,15 +164,7 @@ document.querySelector("#newProductBtn")
                 .toString()
         ]
         notification(`⌛ Adding "${params[0]}"...`)
-
-        try {
-            // uri = getJSONURI(...params)
-            const result = await nfftContract.methods.createNFT("uri").send({ from: kit.defaultAccount })
-        } catch (error) {
-            notification(`⚠️ ${error}.`)
-        }
-        notification(`🎉 You successfully added ${params[0]}.`)
-        getProducts()
+        getJSONURI(...params)
     })
 
 document.querySelector("#marketplace").addEventListener("click", async (e) => {
@@ -196,7 +188,7 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
     }
 })
 
-function getJSONURI(name, imageURL, description, location, price) {
+async function getJSONURI(name, imageURL, description, location, price) {
     //These are the api keys for using the Pinata API
     const pinata = pinataSdk('f2e0188887f4b5ae161f', '92ae688fbe61ce9abcf496ffee7efd82b56eeaf9838293b49e25134280f6cc53')
 
@@ -224,8 +216,18 @@ function getJSONURI(name, imageURL, description, location, price) {
         console.log("And the link can be found at: ")
         uri = `https://ipfs.io/ipfs/${result.IpfsHash}?filename=${name}.json`
         console.log(uri)
+        return uri
     }).catch((error) => {
         console.log(error)
+    }).then(async (result) => {
+        try {
+            // uri = getJSONURI(...params)
+            const result = await nfftContract.methods.createNFT("uri").send({ from: kit.defaultAccount })
+            notification(`🎉 You successfully added ${name}.`)
+            getProducts()
+        } catch (error) {
+            notification(`⚠️ ${error}.`)
+        }
     })
     return uri
 }
