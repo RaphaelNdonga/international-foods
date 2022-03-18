@@ -128,6 +128,17 @@ const getProducts = async function () {
             _products.push(_product)
         }).catch((error) => {
             console.log("There was an error with the json file: ", error)
+            let _product = {
+                index: error,
+                owner: resultOwners[j],
+                name: error,
+                image: error,
+                description: error,
+                location: error,
+                price: new BigNumber(0),
+                sold: 0,
+            }
+            _products.push(_product)
         }).finally(() => {
             products = _products
             console.log(products)
@@ -180,7 +191,7 @@ function buttonTemplate(_product) {
         <div class="d-grid gap-2">
         <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id=${_product.index
             } data-bs-toggle="modal" data-bs-target="#setPriceModal">
-          Sell
+          Set price
         </a>
       </div>`
     }
@@ -242,7 +253,7 @@ document.querySelector("#setPriceBtn").addEventListener("click", async (e) => {
     console.log("The new price should be", price)
     products.forEach((item) => {
         if (item.index == clickedProductIndex) {
-            let currentProduct = products[0]
+            let currentProduct = products[clickedProductIndex]
             const params = [
                 currentProduct.name,
                 currentProduct.image,
@@ -251,10 +262,7 @@ document.querySelector("#setPriceBtn").addEventListener("click", async (e) => {
                 new BigNumber(price).shiftedBy(ERC20_decimals).toString(),
                 false
             ]
-
             getJSONURI(...params)
-
-            getProducts()
         }
     })
 })
