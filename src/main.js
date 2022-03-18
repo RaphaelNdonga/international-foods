@@ -13,6 +13,7 @@ let kit
 let contract
 let nfftContract
 let products = []
+let clickedProductIndex = 0
 
 window.addEventListener('load', async () => {
     notification("⌛ Loading...")
@@ -112,7 +113,7 @@ const getProducts = async function () {
         fetch(request).then(response => response.json()).catch((error) => {
             console.log("There was an error parsing the json: ", error)
         }).then(data => {
-            console.log(data.name)
+            console.log(data)
             let _product = {
                 index: j,
                 owner: resultOwners[j],
@@ -149,9 +150,6 @@ function productTemplate(_product) {
     return `
       <div class="card mb-4">
         <img class="card-img-top" src="${_product.image}" alt="...">
-        <div class="position-absolute top-0 end-0 bg-warning mt-4 px-2 py-1 rounded-start">
-          ${_product.sold} Sold
-        </div>
         <div class="card-body text-left p-4 position-relative">
           <div class="translate-middle-y position-absolute top-0">
           ${identiconTemplate(_product.owner)}
@@ -160,19 +158,40 @@ function productTemplate(_product) {
           <p class="card-text mb-4" style="min-height: 82px">
             ${_product.description}             
           </p>
+          <p class="card-text mb-4" style="min-height: 82px">
+            owned by ${_product.owner}             
+          </p>
+          <p class="card-text mb-4" style="min-height: 82px">
+            price: ${_product.price.shiftedBy(-ERC20_decimals).toFixed(2)}             
+          </p>
           <p class="card-text mt-4">
             <i class="bi bi-geo-alt-fill"></i>
             <span>${_product.location}</span>
           </p>
-          <div class="d-grid gap-2">
-            <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id=${_product.index
-        }>
-              Buy for ${_product.price.shiftedBy(-ERC20_decimals).toFixed(2)} cUSD
-            </a>
-          </div>
+          ${buttonTemplate(_product)}
         </div>
       </div>
     `
+}
+
+function buttonTemplate(_product) {
+    if (_product.owner == kit.defaultAccount) {
+        return `
+        <div class="d-grid gap-2">
+        <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id=${_product.index
+            } data-bs-toggle="modal" data-bs-target="#setPriceModal">
+          Sell
+        </a>
+      </div>`
+    }
+    return `
+    <div class="d-grid gap-2">
+            <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id=${_product.index
+        }>
+              Buy for ${_product.price.shiftedBy(-ERC20_decimals).toFixed(2)} cUSD
+
+            </a>
+          </div>`
 }
 function identiconTemplate(_address) {
     const icon = blockies
@@ -211,34 +230,63 @@ document.querySelector("#newProductBtn")
             document.getElementById("newLocation").value,
             new BigNumber(document.getElementById("newPrice").value)
                 .shiftedBy(ERC20_decimals)
-                .toString()
+                .toString(),
+            true
         ]
         notification(`⌛ Adding "${params[0]}"...`)
         getJSONURI(...params)
     })
 
+document.querySelector("#setPriceBtn").addEventListener("click", async (e) => {
+    const price = document.getElementById("setPriceInput").value
+    console.log("The new price should be", price)
+    products.forEach((item) => {
+        if (item.index == clickedProductIndex) {
+            let currentProduct = products[0]
+            const params = [
+                currentProduct.name,
+                currentProduct.image,
+                currentProduct.description,
+                currentProduct.location,
+                new BigNumber(price),
+                false
+            ]
+
+            getJSONURI(...params)
+
+            getProducts()
+        }
+    })
+})
+
 document.querySelector("#marketplace").addEventListener("click", async (e) => {
     if (e.target.className.includes("buyBtn")) {
         const index = e.target.id
-        notification(`Waiting for payment approval.`)
-        try {
-            await approve(products[index].price)
-        } catch (error) {
-            notification(`Error: ${error}`)
-        }
-        notification(`Awaiting payment for ${products[index].name}`)
-        try {
-            const result = await contract.methods.buyProduct(index).send({ from: kit.defaultAccount })
-            notification(`Successfully bought ${products[index].name}`)
-            getProducts()
-            getBalance()
-        } catch (error) {
-            notification(`Error: ${error}`)
-        }
+        clickedProductIndex = index
+        console.log("Clicked product index is; ", clickedProductIndex)
+        // const owner = products[index].owner
+        // notification(`Waiting for payment approval.`)
+        // try {
+        //     // await approve(products[index].price)
+        //     if (owner == kit.defaultAccount) {
+
+        //     }
+        // } catch (error) {
+        //     notification(`Error: ${error}`)
+        // }
+        // notification(`Awaiting payment for ${products[index].name}`)
+        // try {
+        //     const result = await contract.methods.buyProduct(index).send({ from: kit.defaultAccount })
+        //     notification(`Successfully bought ${products[index].name}`)
+        //     getProducts()
+        //     getBalance()
+        // } catch (error) {
+        //     notification(`Error: ${error}`)
+        // }
     }
 })
 
-async function getJSONURI(name, imageURL, description, location, price) {
+async function getJSONURI(name, imageURL, description, location, price, isNew) {
     //These are the api keys for using the Pinata API
     const pinata = pinataSdk('f2e0188887f4b5ae161f', '92ae688fbe61ce9abcf496ffee7efd82b56eeaf9838293b49e25134280f6cc53')
 
@@ -270,14 +318,27 @@ async function getJSONURI(name, imageURL, description, location, price) {
     }).catch((error) => {
         console.log(error)
     }).then(async (uri) => {
-        try {
-            // uri = getJSONURI(...params)
-            const result = await nfftContract.methods.createNFT(uri).send({ from: kit.defaultAccount })
-            notification(`🎉 You successfully added ${name}.`)
-            getProducts()
-        } catch (error) {
-            notification(`⚠️ ${error}.`)
+        if (isNew) {
+            try {
+                // uri = getJSONURI(...params)
+                const result = await nfftContract.methods.createNFT(uri).send({ from: kit.defaultAccount })
+                notification(`🎉 You successfully added ${name}.`)
+                getProducts()
+            } catch (error) {
+                notification(`⚠️ ${error}.`)
+            }
         }
+        else {
+            try {
+                // uri = getJSONURI(...params)
+                const result = await nfftContract.methods.setTokenURI(clickedProductIndex, uri).send({ from: kit.defaultAccount })
+                notification(`🎉 You successfully added ${name}.`)
+                getProducts()
+            } catch (error) {
+                notification(`⚠️ ${error}.`)
+            }
+        }
+
     })
     return uri
 }
