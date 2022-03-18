@@ -248,7 +248,7 @@ document.querySelector("#setPriceBtn").addEventListener("click", async (e) => {
                 currentProduct.image,
                 currentProduct.description,
                 currentProduct.location,
-                new BigNumber(price),
+                new BigNumber(price).shiftedBy(ERC20_decimals).toString(),
                 false
             ]
 
