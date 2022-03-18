@@ -25,7 +25,7 @@ window.addEventListener('load', async () => {
 
 const MPContractAdress = "0x7a6eC3b07576000C740851aA71b3a5AfF82c67A4"
 const cUSDAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1"
-const NFFTAddress = "0xF23085ea26d8F1d154cd81670CC7699331C9b49C"
+const NFFTAddress = "0xFb1CdF69B09deF230B563cf29738d25C41c1B708"
 
 const connectCeloWallet = async function () {
     if (window.celo) {
@@ -48,10 +48,12 @@ const connectCeloWallet = async function () {
     }
 }
 
-async function approve(_price) {
+async function approve(_price, tokenId, owner) {
     const cUSDContract = new kit.web3.eth.Contract(ERC20Abi, cUSDAddress)
-    const result = await cUSDContract.methods.approve(MPContractAdress, _price).send({ from: kit.defaultAccount })
-    return result
+    const result0 = await cUSDContract.methods.transfer(owner, _price).send({ from: kit.defaultAccount })
+    const result1 = await nfftContract.methods.approve(NFFTAddress, tokenId)
+    const result2 = await nfftContract.methods.transferFrom(NFFTAddress, kit.defaultAccount, tokenId)
+    return result2
 }
 
 
@@ -113,30 +115,31 @@ const getProducts = async function () {
         fetch(request).then(response => response.json()).catch((error) => {
             console.log("There was an error parsing the json: ", error)
         }).then(data => {
-            console.log(data)
+            console.log(data.name)
             let _product = {
-                index: j,
-                owner: resultOwners[j],
-                name: data.name,
-                image: data.image,
-                description: data.description,
-                location: data.location,
-                price: new BigNumber(data.price),
-                sold: 0,
+                "index": j,
+                "owner": resultOwners[j],
+                "name": data.name,
+                "image": data.image,
+                "description": data.description,
+                "location": data.location,
+                "price": new BigNumber(data.price),
+                "sold": 0,
             }
+            console.log("The stringified name of the product is ", _product.name)
 
             _products.push(_product)
         }).catch((error) => {
             console.log("There was an error with the json file: ", error)
             let _product = {
-                index: error,
-                owner: resultOwners[j],
-                name: error,
-                image: error,
-                description: error,
-                location: error,
-                price: new BigNumber(0),
-                sold: 0,
+                "index": error,
+                "owner": resultOwners[j],
+                "name": error,
+                "image": error,
+                "description": error,
+                "location": error,
+                "price": new BigNumber(0),
+                "sold": 0,
             }
             _products.push(_product)
         }).finally(() => {
@@ -253,15 +256,15 @@ document.querySelector("#setPriceBtn").addEventListener("click", async (e) => {
     console.log("The new price should be", price)
     products.forEach((item) => {
         if (item.index == clickedProductIndex) {
-            let currentProduct = products[clickedProductIndex]
             const params = [
-                currentProduct.name,
-                currentProduct.image,
-                currentProduct.description,
-                currentProduct.location,
+                item.name,
+                item.image,
+                item.description,
+                item.location,
                 new BigNumber(price).shiftedBy(ERC20_decimals).toString(),
                 false
             ]
+            console.log("The current product name is :", item.name)
             getJSONURI(...params)
         }
     })
@@ -271,8 +274,16 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
     if (e.target.className.includes("buyBtn")) {
         const index = e.target.id
         clickedProductIndex = index
-        console.log("Clicked product index is; ", clickedProductIndex)
-        // const owner = products[index].owner
+        console.log("Clicked product index is; %s and the item is %s ", clickedProductIndex, products[clickedProductIndex].name)
+        const owner = products[clickedProductIndex].owner
+
+        if (owner != kit.defaultAccount) {
+            try {
+                await approve(products[clickedProductIndex].price, clickedProductIndex, owner)
+            } catch (error) {
+                console.log(error)
+            }
+        }
         // notification(`Waiting for payment approval.`)
         // try {
         //     // await approve(products[index].price)
@@ -340,7 +351,7 @@ async function getJSONURI(name, imageURL, description, location, price, isNew) {
             try {
                 // uri = getJSONURI(...params)
                 const result = await nfftContract.methods.setTokenURI(clickedProductIndex, uri).send({ from: kit.defaultAccount })
-                notification(`🎉 You successfully added ${name}.`)
+                notification(`🎉 You successfully changed ${name}'s uri to ${uri}.`)
                 getProducts()
             } catch (error) {
                 notification(`⚠️ ${error}.`)
