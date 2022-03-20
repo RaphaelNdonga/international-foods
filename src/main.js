@@ -26,6 +26,7 @@ window.addEventListener('load', async () => {
 const MPContractAdress = "0x7a6eC3b07576000C740851aA71b3a5AfF82c67A4"
 const cUSDAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1"
 const NFFTAddress = "0xFb1CdF69B09deF230B563cf29738d25C41c1B708"
+const nullAddress = "0x0000000000000000000000000000000000000000"
 
 const connectCeloWallet = async function () {
     if (window.celo) {
@@ -48,12 +49,27 @@ const connectCeloWallet = async function () {
     }
 }
 
-async function approve(_price, tokenId, owner) {
-    const cUSDContract = new kit.web3.eth.Contract(ERC20Abi, cUSDAddress)
-    const result0 = await cUSDContract.methods.transfer(owner, _price).send({ from: kit.defaultAccount })
-    const result1 = await nfftContract.methods.approve(NFFTAddress, tokenId)
-    const result2 = await nfftContract.methods.transferFrom(NFFTAddress, kit.defaultAccount, tokenId)
-    return result2
+async function transferNFT(_price, tokenId, owner) {
+    await transferMoney(owner, _price)
+    await _transferNFT(owner, kit.defaultAccount, tokenId)
+}
+
+async function transferMoney(recipient, amount) {
+    return new Promise((resolve, reject) => {
+        const cUSDContract = new kit.web3.eth.Contract(ERC20Abi, cUSDAddress)
+        const result = cUSDContract.methods.transfer(recipient, amount).send({ from: kit.defaultAccount })
+        resolve(result)
+    })
+}
+
+async function _transferNFT(owner, receiver, tokenId) {
+    notification(`Transferring nft: ${tokenId}`)
+    return new Promise((resolve, reject) => {
+        const result = nfftContract.methods.safeTransferFrom(owner, receiver, tokenId).send({ from: kit.defaultAccount })
+        console.log("Transferring nft from %s, to %s tokenid %d", owner, receiver, tokenId)
+        notification(`Transferring nft from ${owner}, to ${receiver} and tokenid ${tokenId}`)
+        resolve(result)
+    })
 }
 
 
@@ -64,34 +80,11 @@ const getBalance = async function () {
 
 }
 
-// const getProducts = async function () {
-//     const productsLength = await contract.methods.getProductsLength().call()
-//     const _products = []
-
-//     for (let i = 0; i < productsLength; i++) {
-//         let _product = new Promise(async (resolve, reject) => {
-//             let p = await contract.methods.readProduct(i).call()
-//             resolve({
-//                 index: i,
-//                 owner: p[0],
-//                 name: p[1],
-//                 image: p[2],
-//                 description: p[3],
-//                 location: p[4],
-//                 price: new BigNumber(p[5]),
-//                 sold: p[6],
-//             })
-//         })
-//         _products.push(_product)
-//     }
-//     products = await Promise.all(_products)
-//     renderProducts()
-// }
-
 const getProducts = async function () {
     const productsLength = await nfftContract.methods.tokenId().call()
     const uris = []
     const owners = []
+    const approvals = []
     for (let i = 0; i < productsLength; i++) {
         let uri = new Promise(async (resolve, reject) => {
             let stringUri = await nfftContract.methods.tokenURI(i).call()
@@ -103,9 +96,25 @@ const getProducts = async function () {
         })
         uris.push(uri)
         owners.push(owner)
+
+        let approved = new Promise(async (resolve, reject) => {
+            let _approved = await nfftContract.methods.getApproved(i).call()
+            resolve(_approved)
+        })
+        approvals.push(approved)
     }
     let resultUris = await Promise.all(uris)
     let resultOwners = await Promise.all(owners)
+    let addressesApproved = await Promise.all(approvals)
+    let resultApprovals = []
+    addressesApproved.forEach((item) => {
+        if (item == nullAddress) {
+            resultApprovals.push(false)
+        }
+        else {
+            resultApprovals.push(true)
+        }
+    })
     console.log(uris)
     let _products = []
     for (let j = 0; j < productsLength; j++) {
@@ -124,9 +133,9 @@ const getProducts = async function () {
                 "description": data.description,
                 "location": data.location,
                 "price": new BigNumber(data.price),
-                "sold": 0,
+                "approvedSale": resultApprovals[j],
             }
-            console.log("The stringified name of the product is ", _product.name)
+            console.log("The stringified name of the product is %s and it is approved: %s", _product.name, _product.approvedSale)
 
             _products.push(_product)
         }).catch((error) => {
@@ -139,7 +148,7 @@ const getProducts = async function () {
                 "description": error,
                 "location": error,
                 "price": new BigNumber(0),
-                "sold": 0,
+                "approvedSale": false,
             }
             _products.push(_product)
         }).finally(() => {
@@ -157,7 +166,25 @@ function renderProducts() {
         newDiv.className = "col-md-4"
         newDiv.innerHTML = productTemplate(_product)
         document.getElementById("marketplace").appendChild(newDiv)
+        if (!_product.approvedSale && (_product.owner == kit.defaultAccount)) {
+            document.querySelector(`#approveId`)
+                .addEventListener("click", async (e) => {
+                    const result = new Promise((resolve, reject) => {
+                        resolve(approveSale(_product))
+                    })
+
+                })
+        }
     })
+}
+
+async function approveSale(_product) {
+    try {
+        await nfftContract.methods.approve(NFFTAddress, _product.index).send({ from: kit.defaultAccount })
+    } catch (error) {
+        notification(`Error while approving sale!: ${error}`)
+    }
+
 }
 
 function productTemplate(_product) {
@@ -182,10 +209,31 @@ function productTemplate(_product) {
             <i class="bi bi-geo-alt-fill"></i>
             <span>${_product.location}</span>
           </p>
+          ${approveSaleButton(_product)}
           ${buttonTemplate(_product)}
         </div>
       </div>
     `
+}
+
+function approveSaleButton(_product) {
+    if (_product.approvedSale && (_product.owner == kit.defaultAccount)) {
+        return `
+        <div class="d-grid gap-2">
+        <a class="card-text mb-4" style="min-height: 82px" id="approveId">
+          Up for sale
+        </a>
+      </div>`
+    }
+    else if (!_product.approvedSale && (_product.owner == kit.defaultAccount)) {
+        return `
+        <div class="d-grid gap-2">
+        <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id="approveId">
+          Approve sale
+        </a>
+      </div>`
+    }
+    return ""
 }
 
 function buttonTemplate(_product) {
@@ -253,6 +301,7 @@ document.querySelector("#newProductBtn")
 
 document.querySelector("#setPriceBtn").addEventListener("click", async (e) => {
     const price = document.getElementById("setPriceInput").value
+    notification("Changing the price...")
     console.log("The new price should be", price)
     products.forEach((item) => {
         if (item.index == clickedProductIndex) {
@@ -276,10 +325,11 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
         clickedProductIndex = index
         console.log("Clicked product index is; %s and the item is %s ", clickedProductIndex, products[clickedProductIndex].name)
         const owner = products[clickedProductIndex].owner
+        const price = products[clickedProductIndex].price
 
         if (owner != kit.defaultAccount) {
             try {
-                await approve(products[clickedProductIndex].price, clickedProductIndex, owner)
+                await transferNFT(price, clickedProductIndex, owner)
             } catch (error) {
                 console.log(error)
             }
