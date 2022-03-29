@@ -177,6 +177,7 @@ async function approveSale(_product) {
         await nfftContract.methods.approve(MPContractAdress, _product.index).send({ from: kit.defaultAccount })
         notification(`NFFT ${_product.name} sale approved! Refresh this page to view changes`)
         stopLoading()
+        window.location.reload()
     } catch (error) {
         notification(`Error while approving sale!: ${error}`)
         stopLoading()
@@ -349,6 +350,7 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
                 await transferNFT(owner, index, price)
                 notification(`NFFT has been sold successfully!`)
                 stopLoading()
+                window.location.reload()
             } catch (error) {
                 console.log(error)
                 stopLoading()
@@ -406,6 +408,7 @@ async function getJSONURI(name, imageURL, description, location, price, isNew) {
                 const result = await nfftContract.methods.createNFT(uri).send({ from: kit.defaultAccount })
                 notification(`🎉 You successfully added ${name}.`)
                 stopLoading()
+                window.location.reload()
                 getProducts()
             } catch (error) {
                 notification(`⚠️ ${error}.`)
@@ -418,6 +421,7 @@ async function getJSONURI(name, imageURL, description, location, price, isNew) {
                 const result = await nfftContract.methods.setTokenURI(clickedProductIndex, uri).send({ from: kit.defaultAccount })
                 notification(`🎉 You successfully changed the price .`)
                 stopLoading()
+                window.location.reload()
                 getProducts()
             } catch (error) {
                 notification(`⚠️ ${error}.`)
