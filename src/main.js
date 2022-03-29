@@ -12,6 +12,7 @@ const ERC20_decimals = 18
 let kit
 let marketPlaceContract
 let nfftContract
+let cUSDContract
 let products = []
 let clickedProductIndex = 0
 
@@ -23,7 +24,7 @@ window.addEventListener('load', async () => {
     notificationOff()
 });
 
-const MPContractAdress = "0x5345887bED40c8F0aFB128028802d9D0C57d63Fe"
+const MPContractAdress = "0x35CE59De2AEbEC24F106081501ba778F4Ae99988"
 const cUSDAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1"
 const NFFTAddress = "0xFb1CdF69B09deF230B563cf29738d25C41c1B708"
 
@@ -40,6 +41,7 @@ const connectCeloWallet = async function () {
             kit.defaultAccount = accounts[0]
             marketPlaceContract = new kit.web3.eth.Contract(MarketPlaceAbi, MPContractAdress)
             nfftContract = new kit.web3.eth.Contract(NFFTAbi, NFFTAddress)
+            cUSDContract = new kit.web3.eth.Contract(ERC20Abi, cUSDAddress)
         } catch (error) {
             notification(`Error: ${error}`)
         }
@@ -51,8 +53,8 @@ const connectCeloWallet = async function () {
 async function transferNFT(owner, tokenId, price) {
     notification(`Transferring nft: ${tokenId}`)
     return new Promise((resolve, reject) => {
-        const result = marketPlaceContract.methods.nftTransfer(owner, tokenId, price).send({ from: kit.defaultAccount })
-        console.log("Transferring nft from %s, tokenid %d", owner, tokenId)
+        console.log("Transferring nft from %s, to %s,  tokenid %d", owner, kit.defaultAccount, tokenId)
+        const result = marketPlaceContract.methods.nftTransfer(owner, kit.defaultAccount, tokenId, price).send({ from: kit.defaultAccount })
         notification(`Transferring nft from ${owner} and tokenid ${tokenId}`)
         resolve(result)
     })
@@ -169,6 +171,14 @@ async function approveSale(_product) {
         notification(`Error while approving sale!: ${error}`)
     }
 
+}
+
+async function sendMoney(recipient, amount) {
+    try {
+        await cUSDContract.methods.transfer(recipient, amount).send({ from: kit.defaultAccount })
+    } catch (error) {
+        notification(`Error while sending money!: ${error}`)
+    }
 }
 
 function productTemplate(_product) {
@@ -319,6 +329,7 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
 
         if (owner != kit.defaultAccount) {
             try {
+                await sendMoney(MPContractAdress, price)
                 await transferNFT(owner, index, price)
             } catch (error) {
                 console.log(error)
