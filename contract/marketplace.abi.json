@@ -3,23 +3,16 @@
 		"inputs": [
 			{
 				"internalType": "uint256",
-				"name": "_index",
+				"name": "tokenId",
 				"type": "uint256"
 			}
 		],
-		"name": "buyProduct",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "getProductsLength",
+		"name": "isApproved",
 		"outputs": [
 			{
-				"internalType": "uint256",
+				"internalType": "bool",
 				"name": "",
-				"type": "uint256"
+				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
@@ -28,81 +21,22 @@
 	{
 		"inputs": [
 			{
-				"internalType": "uint256",
-				"name": "_index",
-				"type": "uint256"
-			}
-		],
-		"name": "readProduct",
-		"outputs": [
-			{
-				"internalType": "address payable",
-				"name": "",
+				"internalType": "address",
+				"name": "owner",
 				"type": "address"
 			},
 			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "",
-				"type": "string"
-			},
-			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "tokenId",
 				"type": "uint256"
 			},
 			{
 				"internalType": "uint256",
-				"name": "",
+				"name": "price",
 				"type": "uint256"
 			}
 		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "string",
-				"name": "_name",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "_image",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "_description",
-				"type": "string"
-			},
-			{
-				"internalType": "string",
-				"name": "_location",
-				"type": "string"
-			},
-			{
-				"internalType": "uint256",
-				"name": "_price",
-				"type": "uint256"
-			}
-		],
-		"name": "writeProduct",
+		"name": "nftTransfer",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"

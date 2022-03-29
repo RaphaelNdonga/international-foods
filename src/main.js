@@ -10,7 +10,7 @@ import pinataSdk from '@pinata/sdk'
 const ERC20_decimals = 18
 
 let kit
-let contract
+let marketPlaceContract
 let nfftContract
 let products = []
 let clickedProductIndex = 0
@@ -23,10 +23,9 @@ window.addEventListener('load', async () => {
     notificationOff()
 });
 
-const MPContractAdress = "0x7a6eC3b07576000C740851aA71b3a5AfF82c67A4"
+const MPContractAdress = "0x5345887bED40c8F0aFB128028802d9D0C57d63Fe"
 const cUSDAddress = "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1"
 const NFFTAddress = "0xFb1CdF69B09deF230B563cf29738d25C41c1B708"
-const nullAddress = "0x0000000000000000000000000000000000000000"
 
 const connectCeloWallet = async function () {
     if (window.celo) {
@@ -39,7 +38,7 @@ const connectCeloWallet = async function () {
 
             const accounts = await kit.web3.eth.getAccounts()
             kit.defaultAccount = accounts[0]
-            contract = new kit.web3.eth.Contract(MarketPlaceAbi, MPContractAdress)
+            marketPlaceContract = new kit.web3.eth.Contract(MarketPlaceAbi, MPContractAdress)
             nfftContract = new kit.web3.eth.Contract(NFFTAbi, NFFTAddress)
         } catch (error) {
             notification(`Error: ${error}`)
@@ -49,25 +48,12 @@ const connectCeloWallet = async function () {
     }
 }
 
-async function transferNFT(_price, tokenId, owner) {
-    await transferMoney(owner, _price)
-    await _transferNFT(owner, kit.defaultAccount, tokenId)
-}
-
-async function transferMoney(recipient, amount) {
-    return new Promise((resolve, reject) => {
-        const cUSDContract = new kit.web3.eth.Contract(ERC20Abi, cUSDAddress)
-        const result = cUSDContract.methods.transfer(recipient, amount).send({ from: kit.defaultAccount })
-        resolve(result)
-    })
-}
-
-async function _transferNFT(owner, receiver, tokenId) {
+async function transferNFT(owner, tokenId, price) {
     notification(`Transferring nft: ${tokenId}`)
     return new Promise((resolve, reject) => {
-        const result = nfftContract.methods.safeTransferFrom(owner, receiver, tokenId).send({ from: kit.defaultAccount })
-        console.log("Transferring nft from %s, to %s tokenid %d", owner, receiver, tokenId)
-        notification(`Transferring nft from ${owner}, to ${receiver} and tokenid ${tokenId}`)
+        const result = marketPlaceContract.methods.nftTransfer(owner, tokenId, price).send({ from: kit.defaultAccount })
+        console.log("Transferring nft from %s, tokenid %d", owner, tokenId)
+        notification(`Transferring nft from ${owner} and tokenid ${tokenId}`)
         resolve(result)
     })
 }
@@ -108,11 +94,10 @@ const getProducts = async function () {
     let addressesApproved = await Promise.all(approvals)
     let resultApprovals = []
     addressesApproved.forEach((item) => {
-        if (item == nullAddress) {
-            resultApprovals.push(false)
-        }
-        else {
+        if (item == MPContractAdress) {
             resultApprovals.push(true)
+        } else {
+            resultApprovals.push(false)
         }
     })
     console.log(uris)
@@ -158,7 +143,6 @@ const getProducts = async function () {
         })
     }
 }
-
 function renderProducts() {
     document.getElementById("marketplace").innerHTML = ""
     products.forEach((_product) => {
@@ -167,7 +151,7 @@ function renderProducts() {
         newDiv.innerHTML = productTemplate(_product)
         document.getElementById("marketplace").appendChild(newDiv)
         if (!_product.approvedSale && (_product.owner == kit.defaultAccount)) {
-            document.querySelector(`#approveId`)
+            document.querySelector(`#approve_${_product.index}`)
                 .addEventListener("click", async (e) => {
                     const result = new Promise((resolve, reject) => {
                         resolve(approveSale(_product))
@@ -180,7 +164,7 @@ function renderProducts() {
 
 async function approveSale(_product) {
     try {
-        await nfftContract.methods.approve(NFFTAddress, _product.index).send({ from: kit.defaultAccount })
+        await nfftContract.methods.approve(MPContractAdress, _product.index).send({ from: kit.defaultAccount })
     } catch (error) {
         notification(`Error while approving sale!: ${error}`)
     }
@@ -220,7 +204,7 @@ function approveSaleButton(_product) {
     if (_product.approvedSale && (_product.owner == kit.defaultAccount)) {
         return `
         <div class="d-grid gap-2">
-        <a class="card-text mb-4" style="min-height: 82px" id="approveId">
+        <a class="card-text mb-4" style="min-height: 82px" id="approve_${_product.index}">
           Up for sale
         </a>
       </div>`
@@ -228,7 +212,7 @@ function approveSaleButton(_product) {
     else if (!_product.approvedSale && (_product.owner == kit.defaultAccount)) {
         return `
         <div class="d-grid gap-2">
-        <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id="approveId">
+        <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id="approve_${_product.index}">
           Approve sale
         </a>
       </div>`
@@ -246,14 +230,20 @@ function buttonTemplate(_product) {
         </a>
       </div>`
     }
-    return `
+
+    if (_product.owner != kit.defaultAccount && (_product.approvedSale == true)) {
+        return `
     <div class="d-grid gap-2">
             <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id=${_product.index
-        }>
+            }>
               Buy for ${_product.price.shiftedBy(-ERC20_decimals).toFixed(2)} cUSD
 
             </a>
           </div>`
+    }
+
+    return ``
+
 }
 function identiconTemplate(_address) {
     const icon = blockies
@@ -329,7 +319,7 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
 
         if (owner != kit.defaultAccount) {
             try {
-                await transferNFT(price, clickedProductIndex, owner)
+                await transferNFT(owner, index, price)
             } catch (error) {
                 console.log(error)
             }
