@@ -18,7 +18,7 @@ let clickedProductIndex = 0
 
 window.addEventListener('load', async () => {
     notification("⌛ Loading...")
-    startLoading()
+    // startLoading()
     await connectCeloWallet()
     await getBalance()
     await getProducts()
@@ -46,9 +46,11 @@ const connectCeloWallet = async function () {
             cUSDContract = new kit.web3.eth.Contract(ERC20Abi, cUSDAddress)
         } catch (error) {
             notification(`Error: ${error}`)
+            stopLoading()
         }
     } else {
         notification("Error. Please install celo extension wallet")
+        stopLoading()
     }
 }
 
@@ -112,6 +114,7 @@ const getProducts = async function () {
         const request = new Request(item)
         fetch(request).then(response => response.json()).catch((error) => {
             console.log("There was an error parsing the json: ", error)
+            stopLoading()
         }).then(data => {
             console.log(data.name)
             let _product = {
@@ -129,6 +132,7 @@ const getProducts = async function () {
             _products.push(_product)
         }).catch((error) => {
             console.log("There was an error with the json file: ", error)
+            stopLoading()
             let _product = {
                 "index": error,
                 "owner": resultOwners[j],
@@ -168,9 +172,14 @@ function renderProducts() {
 
 async function approveSale(_product) {
     try {
+        notification(`Approving the sale of ${_product.name}`)
+        startLoading()
         await nfftContract.methods.approve(MPContractAdress, _product.index).send({ from: kit.defaultAccount })
+        notification(`NFFT ${_product.name} sale approved! Refresh this page to view changes`)
+        stopLoading()
     } catch (error) {
         notification(`Error while approving sale!: ${error}`)
+        stopLoading()
     }
 
 }
@@ -180,6 +189,7 @@ async function sendMoney(recipient, amount) {
         await cUSDContract.methods.transfer(recipient, amount).send({ from: kit.defaultAccount })
     } catch (error) {
         notification(`Error while sending money!: ${error}`)
+        stopLoading()
     }
 }
 
@@ -298,12 +308,14 @@ document.querySelector("#newProductBtn")
             true
         ]
         notification(`⌛ Adding "${params[0]}"...`)
+        startLoading()
         getJSONURI(...params)
     })
 
 document.querySelector("#setPriceBtn").addEventListener("click", async (e) => {
     const price = document.getElementById("setPriceInput").value
     notification("Changing the price...")
+    startLoading()
     console.log("The new price should be", price)
     products.forEach((item) => {
         if (item.index == clickedProductIndex) {
@@ -316,6 +328,7 @@ document.querySelector("#setPriceBtn").addEventListener("click", async (e) => {
                 false
             ]
             console.log("The current product name is :", item.name)
+            alert("It may take a while before the price changes are reflected. Moreso, the item may disappear from this page and reappear at the bottom, because the ipfs url has changed and is reloading.")
             getJSONURI(...params)
         }
     })
@@ -331,10 +344,14 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
 
         if (owner != kit.defaultAccount) {
             try {
+                startLoading()
                 await sendMoney(MPContractAdress, price)
                 await transferNFT(owner, index, price)
+                notification(`NFFT has been sold successfully!`)
+                stopLoading()
             } catch (error) {
                 console.log(error)
+                stopLoading()
             }
         }
     }
@@ -381,25 +398,30 @@ async function getJSONURI(name, imageURL, description, location, price, isNew) {
         return uri
     }).catch((error) => {
         console.log(error)
+        stopLoading()
     }).then(async (uri) => {
         if (isNew) {
             try {
                 // uri = getJSONURI(...params)
                 const result = await nfftContract.methods.createNFT(uri).send({ from: kit.defaultAccount })
                 notification(`🎉 You successfully added ${name}.`)
+                stopLoading()
                 getProducts()
             } catch (error) {
                 notification(`⚠️ ${error}.`)
+                stopLoading()
             }
         }
         else {
             try {
                 // uri = getJSONURI(...params)
                 const result = await nfftContract.methods.setTokenURI(clickedProductIndex, uri).send({ from: kit.defaultAccount })
-                notification(`🎉 You successfully changed ${name}'s uri to ${uri}.`)
+                notification(`🎉 You successfully changed the price .`)
+                stopLoading()
                 getProducts()
             } catch (error) {
                 notification(`⚠️ ${error}.`)
+                stopLoading()
             }
         }
 
