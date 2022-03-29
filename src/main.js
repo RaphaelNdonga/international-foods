@@ -18,10 +18,12 @@ let clickedProductIndex = 0
 
 window.addEventListener('load', async () => {
     notification("⌛ Loading...")
+    startLoading()
     await connectCeloWallet()
     await getBalance()
     await getProducts()
     notificationOff()
+    stopLoading()
 });
 
 const MPContractAdress = "0x35CE59De2AEbEC24F106081501ba778F4Ae99988"
@@ -335,26 +337,18 @@ document.querySelector("#marketplace").addEventListener("click", async (e) => {
                 console.log(error)
             }
         }
-        // notification(`Waiting for payment approval.`)
-        // try {
-        //     // await approve(products[index].price)
-        //     if (owner == kit.defaultAccount) {
-
-        //     }
-        // } catch (error) {
-        //     notification(`Error: ${error}`)
-        // }
-        // notification(`Awaiting payment for ${products[index].name}`)
-        // try {
-        //     const result = await contract.methods.buyProduct(index).send({ from: kit.defaultAccount })
-        //     notification(`Successfully bought ${products[index].name}`)
-        //     getProducts()
-        //     getBalance()
-        // } catch (error) {
-        //     notification(`Error: ${error}`)
-        // }
     }
 })
+
+function stopLoading() {
+    console.log("Stopped Loading")
+    document.getElementById("spinner").style.display = "none"
+}
+
+function startLoading() {
+    console.log("Started Loading")
+    document.getElementById("spinner").style.display = "block"
+}
 
 async function getJSONURI(name, imageURL, description, location, price, isNew) {
     //These are the api keys for using the Pinata API
