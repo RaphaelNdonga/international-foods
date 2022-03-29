@@ -225,6 +225,10 @@ function productTemplate(_product) {
 
 function approveSaleButton(_product) {
     if (_product.approvedSale && (_product.owner == kit.defaultAccount)) {
+        /**
+         * If the product has been approved for sale, and the user is the owner of NFT, 
+         * display an "up for sale text"
+         */
         return `
         <div class="d-grid gap-2">
         <a class="card-text mb-4" style="min-height: 82px" id="approve_${_product.index}">
@@ -233,6 +237,10 @@ function approveSaleButton(_product) {
       </div>`
     }
     else if (!_product.approvedSale && (_product.owner == kit.defaultAccount)) {
+        /**
+         * If the product has not been approved for sale, and the user is the owner of NFT,
+         * display an "approve button"
+         */
         return `
         <div class="d-grid gap-2">
         <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id="approve_${_product.index}">
@@ -240,11 +248,17 @@ function approveSaleButton(_product) {
         </a>
       </div>`
     }
+    /**
+     * If the user is not the owner of the NFT, display nothing
+     */
     return ""
 }
 
 function buttonTemplate(_product) {
     if (_product.owner == kit.defaultAccount) {
+        /**
+         * If the user is the owner, display "setPrice" button
+         */
         return `
         <div class="d-grid gap-2">
         <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id=${_product.index
@@ -255,6 +269,10 @@ function buttonTemplate(_product) {
     }
 
     if (_product.owner != kit.defaultAccount && (_product.approvedSale == true)) {
+        /**
+         * If the user is not the owner but the product has been approved for sale,
+         * display "buy" button
+         */
         return `
     <div class="d-grid gap-2">
             <a class="btn btn-lg btn-outline-dark buyBtn fs-6 p-3" id=${_product.index
@@ -264,6 +282,9 @@ function buttonTemplate(_product) {
             </a>
           </div>`
     }
+    /**
+     * In any other case, display nothing
+     */
 
     return ``
 
@@ -338,6 +359,7 @@ document.querySelector("#setPriceBtn").addEventListener("click", async (e) => {
 document.querySelector("#marketplace").addEventListener("click", async (e) => {
     if (e.target.className.includes("buyBtn")) {
         const index = e.target.id
+        //making the clicked product index global so that we can access it elsewhere
         clickedProductIndex = index
         console.log("Clicked product index is; %s and the item is %s ", clickedProductIndex, products[clickedProductIndex].name)
         const owner = products[clickedProductIndex].owner
