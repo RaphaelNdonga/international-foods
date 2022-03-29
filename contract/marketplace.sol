@@ -195,10 +195,7 @@ contract MarketPlace {
         uint256 tokenId,
         uint256 price
     ) public {
-        require(
-            IERC20Token(cUsdTokenAddress).transferFrom(recipient, owner, price),
-            "Transfer failed."
-        );
+        sendERC20Token(owner, price);
         IERC721(nfftTokenAddress).transferFrom(owner, recipient, tokenId);
     }
 
@@ -210,5 +207,9 @@ contract MarketPlace {
             return true;
         }
         return false;
+    }
+
+    function sendERC20Token(address recipient, uint256 amount) public payable {
+        IERC20Token(cUsdTokenAddress).transfer(recipient, amount);
     }
 }
